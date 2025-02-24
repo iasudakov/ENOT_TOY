@@ -5,7 +5,7 @@ from matplotlib import collections as mc
 from .tools import ewma, freeze
 import ot
 import seaborn as sns
-
+import torch.nn.functional as F
 import torch
 import gc
 
@@ -377,9 +377,9 @@ def plot_results(original_dataset, target_dataset, transfered_dataset):
     
 
 
-def plot_trajectories(X_sampler, G, ZC, Z_STD, sde):
+def plot_trajectories(X_sampler, G, ZC, Z_STD, sde, k=1):
     
-    PLOT_X_SIZE = 32
+    PLOT_X_SIZE = 64
 
     
     fig, axes = plt.subplots(1, 3, figsize=(15, 5.2), dpi=150, sharex=True, sharey=True, )
@@ -393,30 +393,32 @@ def plot_trajectories(X_sampler, G, ZC, Z_STD, sde):
     
     
     X = X_sampler.sample(PLOT_X_SIZE)
+
+    T_XZ_np = []
     
     # Our method results G
-    with torch.no_grad():
-        Z = torch.randn(PLOT_X_SIZE, ZC, device='cuda') * Z_STD
-        T_XZ = G(torch.cat([X, Z], axis = -1))
-        
+    for i in range(k):
+        with torch.no_grad():
+            Z = torch.randn(PLOT_X_SIZE, ZC, device='cuda') * Z_STD
+            T_XZ_np.append(G(torch.cat([X, Z], axis = -1)).cpu().numpy())
 
     X_np = X.cpu().numpy()
-    T_XZ_np = T_XZ.cpu().numpy()
 
     lines = []
     for i in range(PLOT_X_SIZE):
-        lines.append((X_np[i], T_XZ_np[i]))
+        for j in range(k):
+            lines.append((X_np[i], T_XZ_np[j][i]))
     lc = mc.LineCollection(lines, linewidths=0.5, color='black')
     axes[2].add_collection(lc)
     axes[2].scatter(
         X_np[:PLOT_X_SIZE, 0], X_np[:PLOT_X_SIZE, 1], c='darkseagreen', edgecolors='black',
         zorder=2,  label=r'$x\sim\mathbb{P}$'
     )
-    axes[2].scatter(
-        T_XZ_np[:PLOT_X_SIZE, 0].flatten(),
-        T_XZ_np[:PLOT_X_SIZE, 1].flatten(),
-        c='wheat', edgecolors='black', zorder=3,  label=r'$sde(x)$'
-    )
+    for i in range(k):
+        axes[2].scatter(
+            T_XZ_np[i][:PLOT_X_SIZE, 0].flatten(),
+            T_XZ_np[i][:PLOT_X_SIZE, 1].flatten(),
+            c='wheat', edgecolors='black', zorder=3)
     axes[2].legend(fontsize=16, loc='lower right', framealpha=1)
     
     
@@ -461,22 +463,29 @@ def plot_trajectories(X_sampler, G, ZC, Z_STD, sde):
     
     
     
+    T_X_np = []
     
+    # Our method results G
+    for i in range(k):
+        with torch.no_grad():
+            T_X_np.append(sde(X).cpu().numpy())
     
     lines = []
     for i in range(PLOT_X_SIZE):
-        lines.append((X_np[i], trajectory[-1][i]))
+        for j in range(k):
+            lines.append((X_np[i], T_X_np[j][i]))
+
     lc = mc.LineCollection(lines, linewidths=0.5, color='black')
     axes[0].add_collection(lc)
     axes[0].scatter(
         X_np[:PLOT_X_SIZE, 0], X_np[:PLOT_X_SIZE, 1], c='darkseagreen', edgecolors='black',
         zorder=2,  label=r'$x\sim\mathbb{P}$'
     )
-    axes[0].scatter(
-        trajectory[-1][:PLOT_X_SIZE, 0].flatten(),
-        trajectory[-1][:PLOT_X_SIZE, 1].flatten(),
-        c='wheat', edgecolors='black', zorder=3,  label=r'$sde(x)$'
-    )
+    for i in range(k):
+        axes[0].scatter(
+            T_X_np[i][:PLOT_X_SIZE, 0].flatten(),
+            T_X_np[i][:PLOT_X_SIZE, 1].flatten(),
+            c='wheat', edgecolors='black', zorder=3)
     axes[0].legend(fontsize=16, loc='lower right', framealpha=1) 
 
 
