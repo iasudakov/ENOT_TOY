@@ -379,7 +379,7 @@ def plot_results(original_dataset, target_dataset, transfered_dataset):
 
 def plot_trajectories(X_sampler, G, ZC, Z_STD, sde, k=1):
     
-    PLOT_X_SIZE = 64
+    PLOT_X_SIZE = 100
 
     
     fig, axes = plt.subplots(1, 3, figsize=(15, 5.2), dpi=150, sharex=True, sharey=True, )
@@ -493,3 +493,4 @@ def plot_trajectories(X_sampler, G, ZC, Z_STD, sde, k=1):
 
     fig.tight_layout()
     return fig, axes
+

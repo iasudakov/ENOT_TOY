@@ -43,7 +43,8 @@ class SwissRollSampler(Sampler):
     def sample(self, batch_size=10):
         batch = datasets.make_swiss_roll(
             n_samples=batch_size,
-            noise=0.8
+            # noise=0.8
+            noise=0.0
         )[0].astype('float32')[:, [0, 2]] / 7.5
         return torch.tensor(batch, device=self.device)
     
