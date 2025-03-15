@@ -35,23 +35,17 @@ class TimeEmbedding(nn.Module):
         pos_emb = pos_emb.view(*shape, self.dim)
 
         return pos_emb
-
+    
+    
 
 class SDE(nn.Module):
-    def __init__(self, shift_model, epsilon, n_steps,
-                 time_dim, n_last_steps_without_noise,
-                 use_positional_encoding, use_gradient_checkpoint,
-                 predict_shift, image_input=False):
+    def __init__(self, shift_model, n_steps, time_dim):
+        
         super().__init__()
         self.shift_model = shift_model
-        self.epsilon = epsilon
         self.n_steps = n_steps
-        self.n_last_steps_without_noise = n_last_steps_without_noise
-        self.use_positional_encoding = use_positional_encoding
-        self.use_gradient_checkpoint = use_gradient_checkpoint
-        self.times = np.linspace(0, 1, n_steps+1).tolist()
-        self.predict_shift = predict_shift
-        self.image_input = image_input
+        self.delta_t = 1/n_steps
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
         self.time = nn.Sequential(
             TimeEmbedding(time_dim, scale=n_steps),
@@ -59,105 +53,20 @@ class SDE(nn.Module):
             Swish(),
             nn.Linear(time_dim, time_dim),
         )
-    
-    def forward(self, x0, return_trajectory=True):            
-        t0 = (torch.zeros(x0.shape[0])).cuda()
+        
+    def forward(self, x0, gamma = 0.0, traj = False):
+        x = x0
+        t = (torch.zeros(x0.shape[0])).to(self.device)
         trajectory = [x0]
-
-        x, t = x0, t0
-
-        for i, t_next in enumerate(self.times[1:]):
-
-            if i >= len(self.times[1:]) - self.n_last_steps_without_noise:
-                x, shift = self._step(x, t, t_next - t, add_noise=False)
+        
+        for step in range(self.n_steps):
+            if step < self.n_steps - 1:
+                t_emb = self.time(t)[:, :, None, None]
+                x = x + self.delta_t*self.shift_model(x, t_emb) + torch.randn_like(x)*np.sqrt(gamma*self.delta_t)
             else:
-                # x, shift = self._step(x, t, t_next - t, add_noise=True)
-                pass
-
-            t = t_next*(torch.ones(x0.shape[0])).cuda()
-            
-            if return_trajectory:
-                trajectory.append(x)
-                    
-        if not return_trajectory:
+                x = x + self.delta_t*self.shift_model(x, t_emb)
+            t += self.delta_t
             trajectory.append(x)
-            
-        trajectory = torch.stack(trajectory, dim=1)
-        
-        return trajectory
-    
-    def _step(self, x, t, delta_t, add_noise=True):
-        if self.predict_shift:
-            shift_dt = self._get_shift(x, t)
-            shifted_x = x + shift_dt
-            shift = shift_dt/(torch.tensor(delta_t).cuda()[:, None, None, None])
-        else:
-            shifted_x = self._get_shift(x, t)
-            shift = (shifted_x - x)/(torch.tensor(delta_t).cuda())
-        noise = self._sample_noise(x, delta_t)
-        
-        if add_noise:
-            return shifted_x + noise, shift
-        
-        return shifted_x, shift
-    
-    def _get_shift(self, x, t):
-        batch_size = x.shape[0]
-        
-        if self.use_positional_encoding:
-            t = torch.tensor(t)
-            t = t.cuda()
-            t = self.time(t)
-
-            
-            if self.image_input:
-                t = t[:, :, None, None]
-                # print(t.shape)
-        else:
-            t = torch.tensor(t).repeat(batch_size)[:, None]
-            if self.image_input:
-                t = t[:, None, None, None]
-                
-            if x.device.type == "cuda":
-                t = t.cuda()
-        
-        if self.use_gradient_checkpoint:
-            return torch.utils.checkpoint.checkpoint(self.shift_model, x, t)
-        
-            if not self.image_input:
-                x = torch.cat((x, t), dim=1)
-                return torch.utils.checkpoint.checkpoint(self.shift_model, x)
-        
-        if not self.image_input:
-            x = torch.cat((x, t), dim=1)
-            return self.shift_model(x)
-        
-        return self.shift_model(x, t)
-        
-    def _sample_noise(self, x, delta_t):
-        noise = math.sqrt(self.epsilon)*torch.sqrt(delta_t[:, None, None, None])*torch.randn_like(x)
-        
-        if x.device.type == "cuda":
-            noise = noise.cuda()
-        return noise
-            
-    def set_epsilon(self, epsilon):
-        self.epsilon = epsilon
-        
-        
-def make_net(n_inputs, n_outputs, n_layers=3, n_hiddens=100):
-    layers = [nn.Linear(n_inputs, n_hiddens), nn.ReLU()]
-    
-    for i in range(n_layers - 1):
-        layers.extend([nn.Linear(n_hiddens, n_hiddens), nn.ReLU()])
-        
-    layers.append(nn.Linear(n_hiddens, n_outputs))
-    
-    return nn.Sequential(*layers)
-        
-        
-# def integrate(values, times):
-#     deltas = times[1:] - times[:-1]
-#     if values.device.type == "cuda":
-#         deltas = deltas.cuda()
-#     return (values*deltas[None, :]).sum(dim = 1)
+        if traj:
+            return x, trajectory
+        return x
