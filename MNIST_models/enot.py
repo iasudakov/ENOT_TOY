@@ -70,3 +70,17 @@ class SDE(nn.Module):
         if traj:
             return x, trajectory
         return x
+    
+
+class G_wrapper(nn.Module):
+    def __init__(self, G, zc, z_std):
+        super().__init__()
+        self.G = G
+        self.zc = zc
+        self.z_std = z_std
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
+    def forward(self, x0):
+        Z = torch.randn((x0.shape[0], self.zc, x0.shape[-2], x0.shape[-1])).to(self.device) * self.z_std
+        xN = self.G(torch.cat([x0, Z], axis = 1))
+        return xN
