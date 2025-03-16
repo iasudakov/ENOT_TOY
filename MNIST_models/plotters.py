@@ -6,8 +6,8 @@ def plot_images(T, sampler, n_x, n_samples):
     X = sampler.sample(n_x)
     
     T_X = torch.stack([T(X) for i in range(n_samples)], dim=1)
-    T_X = T_X.detach().permute(0,1,3,4,2).mul(0.5).add(0.5).numpy().clip(0,1)
-    X = X.permute(0,2,3,1).mul(0.5).add(0.5).numpy().clip(0,1)
+    T_X = T_X.to('cpu').detach().permute(0,1,3,4,2).mul(0.5).add(0.5).numpy().clip(0,1)
+    X = X.permute(0,2,3,1).mul(0.5).add(0.5).to('cpu').numpy().clip(0,1)
     
     fig, axes = plt.subplots(n_x, n_samples+1, figsize=(n_samples * 1.8, n_x * 1.5), dpi=450)
 
@@ -44,8 +44,8 @@ def plot_trajectories(T, gamma, sampler, n_x):
     for i in range(n_x):
         X = sampler.sample(1)
         T_X = torch.stack(T(X, gamma, traj=True)[1], dim=1)[:, 1:]
-        T_X = T_X.detach().permute(0,1,3,4,2).mul(0.5).add(0.5).numpy().clip(0,1)
-        X_img = X.permute(0,2,3,1).mul(0.5).add(0.5).numpy().clip(0,1)
+        T_X = T_X.to('cpu').detach().permute(0,1,3,4,2).mul(0.5).add(0.5).numpy().clip(0,1)
+        X_img = X.permute(0,2,3,1).mul(0.5).add(0.5).to('cpu').numpy().clip(0,1)
         
         ax = axes[i][0]
         ax.imshow(X_img[0])
