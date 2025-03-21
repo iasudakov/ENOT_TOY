@@ -34,6 +34,7 @@ def plot_images(T, sampler, n_x, n_samples):
                 ax.set_title(rf"$G(x0)$")
             
     fig.tight_layout(pad=0.001)
+    return fig
 
 
     
@@ -67,3 +68,4 @@ def plot_trajectories(T, gamma, sampler, n_x):
                 ax.set_title(fr"t={round(0.1*(j+1), 1)}")
             
     fig.tight_layout(pad=0.001)
+    return fig

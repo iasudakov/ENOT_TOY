@@ -399,8 +399,7 @@ def plot_trajectories(X_sampler, G, ZC, Z_STD, sde, k=1):
     # Our method results G
     for i in range(k):
         with torch.no_grad():
-            Z = torch.randn(PLOT_X_SIZE, ZC, device='cuda') * Z_STD
-            T_XZ_np.append(G(torch.cat([X, Z], axis = -1)).cpu().numpy())
+            T_XZ_np.append(G(X).cpu().numpy())
 
     X_np = X.cpu().numpy()
 
