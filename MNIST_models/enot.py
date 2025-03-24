@@ -71,6 +71,48 @@ class SDE(nn.Module):
             return x, trajectory
         return x
     
+    
+class SDE_denoiser(nn.Module):
+    def __init__(self, denoiser, n_steps, time_dim):
+        
+        super().__init__()
+        self.denoiser = denoiser
+        self.n_steps = n_steps
+        self.delta_t = 1/n_steps
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
+        self.time = nn.Sequential(
+            TimeEmbedding(time_dim, scale=n_steps),
+            nn.Linear(time_dim, time_dim),
+            Swish(),
+            nn.Linear(time_dim, time_dim),
+        )
+        
+    def forward(self, x0, gamma = 0.0, traj = False):
+        x = x0
+        t = (torch.zeros(x0.shape[0])).to(self.device)
+        trajectory = [x0]
+        
+        for step in range(self.n_steps):
+            batch_size = x.shape[0]
+    
+            if step < self.n_steps - 1:
+                t_emb = self.time(t)[:, :, None, None]
+                # a = self.denoiser(x, t_emb)
+                # b = (1-torch.tensor(t)[:, None, None, None].cuda())
+                
+                # print(a.shape, b.shape)
+                x = x + self.delta_t*(self.denoiser(x, t_emb) - x)/(1-torch.tensor(t)[:, None, None, None].cuda()) + torch.randn_like(x)*np.sqrt(gamma*self.delta_t)
+            else:
+                x = x + self.delta_t*(self.denoiser(x, t_emb) - x)/(1-torch.tensor(t)[:, None, None, None].cuda())
+                
+            t += self.delta_t
+            trajectory.append(x)
+        if traj:
+            return x, trajectory
+        return x
+
+
 
 class G_wrapper(nn.Module):
     def __init__(self, G, zc, z_std):
