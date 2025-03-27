@@ -63,6 +63,33 @@ class SDE(nn.Module):
             return x, trajectory
         return x
     
+    
+class SDE_denoiser(nn.Module):
+    def __init__(self, denoiser, n_steps):
+        
+        super().__init__()
+        self.denoiser = denoiser
+        self.n_steps = n_steps
+        self.delta_t = 1/n_steps
+        self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        
+    def forward(self, x0, gamma = 0.0, traj = False):
+        x = x0
+        t = (torch.zeros(x0.shape[0])).to(self.device)
+        trajectory = [x0]
+        
+        for step in range(self.n_steps):
+            if step < self.n_steps - 1:
+                x = x + self.delta_t*(self.denoiser(x, t) - x)/(1-torch.tensor(t)[:, None, None, None].cuda()) + torch.randn_like(x)*np.sqrt(gamma*self.delta_t)
+            else:
+                x = x + self.delta_t*(self.denoiser(x, t) - x)/(1-torch.tensor(t)[:, None, None, None].cuda())
+            t += self.delta_t
+            trajectory.append(x)
+        if traj:
+            return x, trajectory
+        return x
+    
+
 
 class G_wrapper(nn.Module):
     def __init__(self, G, nz=100, z_std=0.1):
@@ -73,6 +100,6 @@ class G_wrapper(nn.Module):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         
     def forward(self, x0):
-        latent_z = torch.randn(x0.shape[0], device=self.device)*self.z_std
-        xN = self.G(x0, latent_z)
+        x = torch.cat([x0, torch.randn_like(x0[:, :1, :, :])], dim=1)
+        xN = self.G(x)
         return xN
