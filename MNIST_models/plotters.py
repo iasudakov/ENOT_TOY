@@ -2,10 +2,13 @@ import torch
 import matplotlib.pyplot as plt
 
 
-def plot_images(T, sampler, n_x, n_samples):
+def plot_images(T, sampler, n_x, n_samples, gamma=None):
     X = sampler.sample(n_x)
     
-    T_X = torch.stack([T(X) for i in range(n_samples)], dim=1)
+    if gamma:
+        T_X = torch.stack([T(X, gamma) for i in range(n_samples)], dim=1)
+    else:
+        T_X = torch.stack([T(X) for i in range(n_samples)], dim=1)
     T_X = T_X.to('cpu').detach().permute(0,1,3,4,2).mul(0.5).add(0.5).numpy().clip(0,1)
     X = X.permute(0,2,3,1).mul(0.5).add(0.5).to('cpu').numpy().clip(0,1)
     

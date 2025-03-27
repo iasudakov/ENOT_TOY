@@ -14,7 +14,6 @@ import multiprocessing
 from PIL import Image
 from .inception import InceptionV3
 from tqdm import tqdm_notebook as tqdm
-from .fid_score import calculate_frechet_distance
 from .distributions import LoaderSampler
 import h5py
 from torch.utils.data import TensorDataset
@@ -187,9 +186,12 @@ def load_dataset(name, path, img_size=64, batch_size=64, test_ratio=0.1, device=
     # train_idx, test_idx = idx[:-test_size], idx[-test_size:]
     # train_set, test_set = Subset(dataset, train_idx), Subset(dataset, test_idx)
 
+    train_loader = DataLoader(train_set, shuffle=True, num_workers=8, batch_size=batch_size)
+    test_loader = DataLoader(test_set, shuffle=True, num_workers=8, batch_size=batch_size)
+    
     train_sampler = LoaderSampler(DataLoader(train_set, shuffle=True, num_workers=8, batch_size=batch_size), device)
     test_sampler = LoaderSampler(DataLoader(test_set, shuffle=True, num_workers=8, batch_size=batch_size), device)
-    return train_sampler, test_sampler
+    return train_sampler, test_sampler, train_loader, test_loader
 
 def ewma(x, span=200):
     return pd.DataFrame({'x': x}).ewm(span=span).mean().values[:, 0]
