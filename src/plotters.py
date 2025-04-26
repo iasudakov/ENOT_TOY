@@ -455,7 +455,7 @@ def plot_trajectories(X_sampler, G, ZC, Z_STD, sde, k=1):
     axes[1].scatter(
         trajectory[-1][:PLOT_X_SIZE, 0].flatten(),
         trajectory[-1][:PLOT_X_SIZE, 1].flatten(),
-        c='wheat', edgecolors='black', zorder=3,  label=r'$T(x,z)$'
+        c='wheat', edgecolors='black', zorder=3,  label=r'$G(x,z)$'
     )
     axes[1].legend(fontsize=16, loc='lower right', framealpha=1) 
     
