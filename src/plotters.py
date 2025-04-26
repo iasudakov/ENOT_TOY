@@ -51,7 +51,7 @@ def plot_Z_images(XZ, Y, T):
         
     axes[0, 0].set_ylabel('X', fontsize=24)
     for i in range(4):
-        axes[i+1, 0].set_ylabel('T(X,Z)', fontsize=24)
+        axes[i+1, 0].set_ylabel('G(X,Z)', fontsize=24)
     axes[-1, 0].set_ylabel('Y', fontsize=24)
     
     fig.tight_layout(pad=0.001)
@@ -88,8 +88,8 @@ def plot_bar_and_stochastic_2D(X_sampler, Y_sampler, T, ZD, Z_STD, plot_discrete
     for i in range(2):
         axes[i].set_xlim(-2.5, 2.5); axes[i].set_ylim(-2.5, 2.5)
         
-    axes[0].set_title(r'Map $x\mapsto \overline{T}(x)=\int_{\mathcal{Z}}T(x,z)d\mathbb{S}(z)$', fontsize=22, pad=10)
-    axes[1].set_title(r'Stochastic map $x\mapsto T(x,z)$', fontsize=20, pad=10)    
+    axes[0].set_title(r'Map $x\mapsto \overline{T}(x)=\int_{\mathcal{Z}}G(x,z)d\mathbb{S}(z)$', fontsize=22, pad=10)
+    axes[1].set_title(r'Stochastic map $x\mapsto G(x,z)$', fontsize=20, pad=10)    
     axes[2].set_title(r'DOT map $x\mapsto \int y d\pi^{*}(y|x)$', fontsize=18, pad=10)
     
     # Computing and plotting discrete OT bar map
